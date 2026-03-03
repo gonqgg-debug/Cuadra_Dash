@@ -21,9 +21,26 @@ export function WidgetFrame({ toolName, data }) {
     fetch(url)
       .then(r => r.text())
       .then(html => {
+        const dataJson = JSON.stringify(data)
         const injected = html.replace(
-          "<head>",
-          `<head><script>window.__WIDGET_DATA__ = ${JSON.stringify(data)};</script>`
+          "</body>",
+          `<script>
+    (function() {
+      var data = ${dataJson};
+      function tryRender() {
+        if (typeof render === 'function') {
+          render(data);
+        } else if (typeof window.render === 'function') {
+          window.render(data);
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryRender);
+      } else {
+        tryRender();
+      }
+    })();
+  </script></body>`
         )
         setHtmlContent(injected)
       })
