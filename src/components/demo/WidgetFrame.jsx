@@ -12,7 +12,7 @@ const WIDGET_URLS = {
 }
 
 export function WidgetFrame({ toolName, data }) {
-  const [blobUrl, setBlobUrl] = useState(null)
+  const [htmlContent, setHtmlContent] = useState(null)
   const url = WIDGET_URLS[toolName]
 
   useEffect(() => {
@@ -25,29 +25,19 @@ export function WidgetFrame({ toolName, data }) {
           "<head>",
           `<head><script>window.__WIDGET_DATA__ = ${JSON.stringify(data)};</script>`
         )
-        const blob = new Blob([injected], { type: "text/html" })
-        const objectUrl = URL.createObjectURL(blob)
-        setBlobUrl(prev => {
-          if (prev) URL.revokeObjectURL(prev)
-          return objectUrl
-        })
+        setHtmlContent(injected)
       })
       .catch(console.error)
-
-    return () => setBlobUrl(prev => {
-      if (prev) URL.revokeObjectURL(prev)
-      return null
-    })
   }, [url, JSON.stringify(data)])
 
-  if (!blobUrl) return (
+  if (!htmlContent) return (
     <div className="h-48 bg-gray-50 rounded-xl animate-pulse border border-gray-100" />
   )
 
   return (
     <div className="w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm my-2">
       <iframe
-        src={blobUrl}
+        srcDoc={htmlContent}
         className="w-full"
         style={{ height: 340, border: "none" }}
         sandbox="allow-scripts"
