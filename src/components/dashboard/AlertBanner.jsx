@@ -16,10 +16,10 @@ const STYLES = {
     linkClass: "text-amber-700 hover:text-amber-800",
   },
   info: {
-    container: "bg-blue-50 border-blue-200 text-blue-800",
+    container: "bg-orange-50 border-orange-200 text-orange-800",
     icon: Info,
-    iconClass: "text-blue-500",
-    linkClass: "text-blue-700 hover:text-blue-800",
+    iconClass: "text-orange-500",
+    linkClass: "text-orange-700 hover:text-orange-800",
   },
 }
 

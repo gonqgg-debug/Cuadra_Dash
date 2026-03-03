@@ -214,10 +214,10 @@ export function Home() {
       </div>
 
       {/* SECCIÓN 6: Insight del día */}
-      <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+      <div className="rounded-lg border border-orange-100 bg-orange-50 p-4">
         <div className="flex items-start gap-3">
-          <Zap className="h-5 w-5 shrink-0 text-blue-500" />
-          <p className="font-mono text-sm italic text-blue-900">
+          <Zap className="h-5 w-5 shrink-0 text-orange-500" />
+          <p className="font-display text-sm italic text-orange-900">
             {insightTexto}
           </p>
         </div>

@@ -48,7 +48,7 @@ export function LiveFeed({ events = [], maxItems = 15, embedded = false }) {
             className={cn(
               "flex items-center gap-3 py-2.5 px-4",
               i === 0
-                ? "animate-slide-in bg-blue-50/40"
+                ? "animate-slide-in bg-orange-50/40"
                 : "bg-white hover:bg-gray-50/50"
             )}
           >

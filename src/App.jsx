@@ -12,9 +12,11 @@ import { Riesgo } from "@/pages/Riesgo"
 import { Configuracion } from "@/pages/Configuracion"
 import { Demo } from "@/pages/Demo"
 
+const basename = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "") || "/"
+
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardLayout />}>

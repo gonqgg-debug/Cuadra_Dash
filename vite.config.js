@@ -6,8 +6,9 @@ import react from '@vitejs/plugin-react'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
+// Solo usa /Cuadra_Dash/ en GitHub Pages. Localmente usa / para que preview funcione.
 export default defineConfig({
-  base: process.env.NODE_ENV === "production" ? "/Cuadra_Dash/" : "/",
+  base: process.env.VITE_BASE ?? "/",
   plugins: [react()],
   resolve: {
     alias: {

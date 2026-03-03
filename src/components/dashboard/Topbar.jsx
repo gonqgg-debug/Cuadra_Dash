@@ -45,16 +45,19 @@ export function Topbar({ connected = false }) {
         <Badge
           variant="secondary"
           className={cn(
-            "rounded-full px-2.5 py-0.5 text-xs font-medium",
+            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
             connected
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              ? "border border-orange-200 bg-orange-50 text-orange-700"
               : "border-gray-200 bg-gray-100 text-gray-600"
           )}
         >
+          {connected && (
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+          )}
           {connected ? "Live" : "Offline"}
         </Badge>
         <Avatar className="h-8 w-8">
-          <AvatarFallback className="bg-blue-600 text-xs font-medium text-white">
+          <AvatarFallback className="bg-orange-500 text-xs font-medium text-white">
             AS
           </AvatarFallback>
         </Avatar>

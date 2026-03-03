@@ -18,7 +18,7 @@ export function StatCard({
       className={cn(
         "rounded-lg border border-gray-200 bg-white shadow-sm",
         compact ? "p-4" : "p-5",
-        flash && "ring-2 ring-blue-400 ring-offset-1 transition-all duration-300"
+        flash && "ring-2 ring-orange-400 ring-offset-1 transition-all duration-300"
       )}
     >
       <div className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
@@ -27,7 +27,7 @@ export function StatCard({
       <div className="flex items-baseline gap-2">
         <span
           className={cn(
-            "font-semibold text-gray-900 font-mono",
+            "font-semibold text-gray-900 font-display",
             compact ? "text-xl" : "text-2xl"
           )}
         >
