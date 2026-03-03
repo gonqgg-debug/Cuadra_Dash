@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 
-const SERVER = import.meta.env.VITE_SERVER_URL || ""
+const SERVER = import.meta.env.VITE_SERVER_URL || "https://cuadrainsurance-production.up.railway.app"
 
 const MOCK_EVENTS = [
   { id: "e1", canal: "whatsapp", tool: "cotizador", summary: "Cotización auto - Juan Pérez", timestamp: new Date(Date.now() - 120000).toISOString() },
