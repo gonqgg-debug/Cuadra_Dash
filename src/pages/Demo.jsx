@@ -121,6 +121,9 @@ export function Demo() {
           ...(toolUse?.input || {}),
           ...(structuredContent || {}),
         }
+        console.log("toolUse.input:", JSON.stringify(toolUse?.input, null, 2))
+        console.log("structuredContent:", JSON.stringify(structuredContent, null, 2))
+        console.log("widgetData para widget:", JSON.stringify(widgetData, null, 2))
         setMessages((prev) => [
           ...prev,
           { role: "widget", toolName: tool, data: widgetData },
