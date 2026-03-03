@@ -14,8 +14,10 @@ const WIDGET_URLS = {
 export function WidgetFrame({ toolName, data }) {
   const iframeRef = useRef(null)
   const [htmlContent, setHtmlContent] = useState(null)
+  const [iframeHeight, setIframeHeight] = useState(340)
   const url = WIDGET_URLS[toolName]
 
+  // Cargar HTML del widget
   useEffect(() => {
     if (!url) return
     fetch(url)
@@ -24,6 +26,20 @@ export function WidgetFrame({ toolName, data }) {
       .catch(console.error)
   }, [url])
 
+  // Escuchar mensajes de tamaño del widget
+  useEffect(() => {
+    const handleMessage = (event) => {
+      const msg = event.data
+      if (!msg || msg.jsonrpc !== "2.0") return
+      if (msg.method === "ui/notifications/size-changed" && msg.params?.height) {
+        setIframeHeight(msg.params.height + 32)
+      }
+    }
+    window.addEventListener("message", handleMessage)
+    return () => window.removeEventListener("message", handleMessage)
+  }, [])
+
+  // Enviar datos al widget cuando carga
   const handleLoad = () => {
     if (!iframeRef.current || !data) return
     iframeRef.current.contentWindow?.postMessage({
@@ -44,7 +60,7 @@ export function WidgetFrame({ toolName, data }) {
         srcDoc={htmlContent}
         onLoad={handleLoad}
         className="w-full"
-        style={{ height: 340, border: "none" }}
+        style={{ height: iframeHeight, border: "none", transition: "height 0.3s ease" }}
         sandbox="allow-scripts"
       />
     </div>
