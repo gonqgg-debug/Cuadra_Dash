@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { DashboardLayout } from "@/layouts/DashboardLayout"
-import { DemoLayout } from "@/layouts/DemoLayout"
 import { Home } from "@/pages/Home"
 import { OverviewVentas } from "@/pages/OverviewVentas"
 import { Canales } from "@/pages/Canales"
@@ -30,9 +29,7 @@ function App() {
           <Route path="riesgo" element={<Riesgo />} />
           <Route path="configuracion" element={<Configuracion />} />
         </Route>
-        <Route path="/demo" element={<DemoLayout />}>
-          <Route index element={<Demo />} />
-        </Route>
+        <Route path="/demo" element={<Demo />} />
       </Routes>
     </BrowserRouter>
   )

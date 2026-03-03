@@ -5,6 +5,7 @@ const CANAL_DOT = {
   whatsapp: "bg-green-500",
   website: "bg-blue-500",
   agente: "bg-violet-500",
+  demo: "bg-orange-500",
 }
 
 function getCanalDot(canal) {
