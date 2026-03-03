@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatCard } from "@/components/dashboard/StatCard"
 import { LiveFeed } from "@/components/dashboard/LiveFeed"
+import { WidgetFrame } from "@/components/demo/WidgetFrame"
 import { formatCurrency } from "@/lib/utils"
 import { CheckCircle2, Loader2, Circle } from "lucide-react"
 
@@ -11,11 +12,31 @@ const SERVER =
   import.meta.env.VITE_SERVER_URL ||
   "https://cuadrainsurance-production.up.railway.app"
 
+const WIDGET_TOOLS = [
+  "render_quotes_widget",
+  "render_siniestro_widget",
+  "render_coverage_recommendation",
+  "render_policy_summary",
+  "render_renewal_alert",
+  "render_policy_confirmation",
+]
+
 const QUICK_PROMPTS = [
   "Quiero cotizar mi Honda CR-V 2024, vivo en Polanco",
   "Tuve un accidente, me chocaron por atrás en Insurgentes",
   "¿Qué cubre el seguro de auto amplio?",
 ]
+
+function getSummary(tool, data) {
+  if (tool?.includes?.("quote") || data?.quotes) {
+    const p = data?.quotes?.[0]?.prima_anual ?? data?.quotes?.[0]?.precio ?? 0
+    return `Cotización · desde $${Number(p).toLocaleString("es-MX")}/año`
+  }
+  if (tool === "report_siniestro" || data?.folio) {
+    return `Siniestro ${data?.folio ?? ""} · ${data?.tipo ?? "accidente"}`
+  }
+  return tool || "Tool"
+}
 
 export function Demo() {
   const [messages, setMessages] = useState([])
@@ -74,6 +95,76 @@ export function Demo() {
     setLocalEvents((prev) => [ev, ...prev].slice(0, 50))
   }, [])
 
+  const handleToolResult = useCallback(
+    (toolUse, toolResult) => {
+      let parsed = null
+      try {
+        const text = toolResult?.content?.[0]?.text || ""
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = toolUse?.input || {}
+      }
+
+      const tool = toolUse?.name || ""
+
+      if (WIDGET_TOOLS.includes(tool)) {
+        const widgetData = toolUse?.input || parsed
+        setMessages((prev) => [
+          ...prev,
+          { role: "widget", toolName: tool, data: widgetData },
+        ])
+      }
+
+      if (tool === "get_auto_quotes") {
+        const prima =
+          toolUse?.input?.quotes?.[0]?.precio_anual ??
+          parsed?.quotes?.[0]?.prima_anual ??
+          parsed?.quotes?.[0]?.precio ??
+          0
+        setKpis((prev) => ({
+          ...prev,
+          cotizaciones: prev.cotizaciones + 1,
+          primaTotal: prev.primaTotal + Number(prima),
+        }))
+      }
+      if (tool === "report_siniestro") {
+        setKpis((prev) => ({ ...prev, siniestros: prev.siniestros + 1 }))
+      }
+
+      setLocalEvents((prev) =>
+        [
+          {
+            id: Date.now(),
+            tool,
+            canal: "demo",
+            summary: getSummary(tool, toolUse?.input || parsed),
+            timestamp: Date.now(),
+          },
+          ...prev,
+        ].slice(0, 20)
+      )
+
+      if (!WIDGET_TOOLS.includes(tool)) {
+        if (tool === "get_auto_quotes") {
+          setLastResult({
+            tool: "quote",
+            quotes: parsed?.quotes ?? parsed?.cotizaciones ?? [],
+          })
+        } else if (tool === "report_siniestro") {
+          setLastResult({
+            tool: "report_siniestro",
+            folio: parsed?.folio ?? parsed?.folioSiniestro ?? "SIN-XXXX",
+            timeline: parsed?.timeline ?? parsed?.pasos ?? [],
+            siguientePaso: parsed?.siguientePaso ?? parsed?.nextStep ?? "",
+          })
+        } else {
+          setLastResult({ tool, data: parsed })
+        }
+      }
+    },
+    []
+  )
+
   const handleSend = useCallback(
     async (text) => {
       const userText = text || input.trim()
@@ -102,15 +193,18 @@ export function Demo() {
 
         const data = await res.json()
         const assistantBlocks = Array.isArray(data.content) ? data.content : []
-        const textContent = assistantBlocks
-          .filter((b) => b?.type === "text")
-          .map((b) => b?.text ?? "")
-          .join("\n")
-          || data.text
-          || data.message
-          || ""
-        const toolCalls = data.tool_calls ?? data.toolCalls ?? []
-        const toolResults = data.tool_results ?? data.toolResults ?? data.result ?? {}
+        const textContent =
+          assistantBlocks
+            .filter((b) => b?.type === "text")
+            .map((b) => b?.text ?? "")
+            .join("\n") ||
+          data.text ||
+          data.message ||
+          ""
+        const toolUses =
+          data.content?.filter((b) => b.type === "mcp_tool_use") || []
+        const toolResults =
+          data.content?.filter((b) => b.type === "mcp_tool_result") || []
 
         if (textContent) {
           setMessages((prev) => [
@@ -126,40 +220,9 @@ export function Demo() {
           },
         ])
 
-        // Tool results
-        if (toolCalls.length > 0 || Object.keys(toolResults).length > 0) {
-          const tool = toolCalls[0]?.name ?? Object.keys(toolResults)[0] ?? ""
-          const result = toolResults[tool] ?? toolResults
-          if (tool?.includes?.("quote") || result?.quotes) {
-            setLastResult({
-              tool: "quote",
-              quotes: result.quotes ?? result.cotizaciones ?? [],
-            })
-            setKpis((prev) => ({
-              ...prev,
-              cotizaciones: prev.cotizaciones + 1,
-              primaTotal:
-                prev.primaTotal +
-                (result.quotes ?? result.cotizaciones ?? []).reduce(
-                  (s, q) => s + (q.prima ?? q.precio ?? 0),
-                  0
-                ),
-            }))
-            addEvent("cotizador", `Cotización: ${userText.slice(0, 40)}...`)
-          } else if (tool === "report_siniestro" || result?.folio) {
-            setLastResult({
-              tool: "report_siniestro",
-              folio: result.folio ?? result.folioSiniestro ?? "SIN-XXXX",
-              timeline: result.timeline ?? result.pasos ?? [],
-              siguientePaso: result.siguientePaso ?? result.nextStep ?? "",
-            })
-            setKpis((prev) => ({
-              ...prev,
-              siniestros: prev.siniestros + 1,
-            }))
-            addEvent("fnol", `Siniestro reportado: ${result.folio ?? ""}`)
-          }
-        }
+        toolUses.forEach((toolUse, i) => {
+          handleToolResult(toolUse, toolResults[i] ?? {})
+        })
       } catch (err) {
         console.warn("Chat error:", err)
         setMessages((prev) => [
@@ -175,7 +238,7 @@ export function Demo() {
         setIsLoading(false)
       }
     },
-    [input, isLoading, history, addEvent]
+    [input, isLoading, history, handleToolResult]
   )
 
   return (
@@ -244,29 +307,41 @@ export function Demo() {
             ) : (
               <div className="space-y-3">
                 {messages.map((message, i) => {
-                  const text = typeof message.content === "string"
-                    ? message.content
-                    : message.content?.filter?.((b) => b?.type === "text")?.map?.((b) => b?.text ?? "")?.join("\n") || ""
-                  return (
-                    <div
-                      key={i}
-                      className={
-                        message.role === "user"
-                        ? "flex justify-end"
-                        : "flex justify-start"
-                      }
-                    >
-                      <div
-                        className={
-                          message.role === "user"
-                          ? "max-w-[80%] rounded-2xl rounded-tr-sm bg-orange-500 px-4 py-2 text-sm text-white"
-                          : "max-w-[85%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm text-gray-800 whitespace-pre-wrap"
-                        }
-                      >
-                        {text}
+                  if (message.role === "user") {
+                    return (
+                      <div key={i} className="flex justify-end">
+                        <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-orange-500 px-4 py-2 text-sm text-white">
+                          {message.content}
+                        </div>
                       </div>
-                    </div>
-                  )
+                    )
+                  }
+                  if (message.role === "assistant") {
+                    const text =
+                      typeof message.content === "string"
+                        ? message.content
+                        : message.content?.filter?.((b) => b?.type === "text")
+                            ?.map?.((b) => b?.text ?? "")
+                            ?.join("\n") || ""
+                    return (
+                      <div key={i} className="flex justify-start">
+                        <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm text-gray-800 whitespace-pre-wrap">
+                          {text}
+                        </div>
+                      </div>
+                    )
+                  }
+                  if (message.role === "widget") {
+                    return (
+                      <div key={i} className="w-full px-1">
+                        <WidgetFrame
+                          toolName={message.toolName}
+                          data={message.data}
+                        />
+                      </div>
+                    )
+                  }
+                  return null
                 })}
                 {isLoading && (
                   <div className="flex justify-start">
@@ -374,7 +449,7 @@ export function Demo() {
                           {q.aseguradora ?? q.nombre ?? "Aseguradora"}
                         </p>
                         <p className="font-display text-xl font-semibold text-orange-600">
-                          {formatCurrency(q.prima ?? q.precio ?? q.monto ?? 0)}
+                          {formatCurrency(q.prima ?? q.precio ?? q.precio_anual ?? q.monto ?? 0)}
                         </p>
                         {q.cobertura && (
                           <Badge variant="secondary" className="mt-1 text-xs">
