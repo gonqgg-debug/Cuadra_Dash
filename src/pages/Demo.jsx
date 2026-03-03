@@ -101,17 +101,29 @@ export function Demo() {
         }
 
         const data = await res.json()
-        const content = data.content ?? data.text ?? data.message ?? ""
+        const assistantBlocks = Array.isArray(data.content) ? data.content : []
+        const textContent = assistantBlocks
+          .filter((b) => b?.type === "text")
+          .map((b) => b?.text ?? "")
+          .join("\n")
+          || data.text
+          || data.message
+          || ""
         const toolCalls = data.tool_calls ?? data.toolCalls ?? []
         const toolResults = data.tool_results ?? data.toolResults ?? data.result ?? {}
 
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content },
-        ])
+        if (textContent) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: textContent },
+          ])
+        }
         setHistory((prev) => [
           ...prev,
-          { role: "assistant", content },
+          {
+            role: "assistant",
+            content: assistantBlocks.length > 0 ? assistantBlocks : textContent,
+          },
         ])
 
         // Tool results
@@ -231,26 +243,31 @@ export function Demo() {
               </div>
             ) : (
               <div className="space-y-3">
-                {messages.map((m, i) => (
-                  <div
-                    key={i}
-                    className={
-                      m.role === "user"
+                {messages.map((message, i) => {
+                  const text = typeof message.content === "string"
+                    ? message.content
+                    : message.content?.filter?.((b) => b?.type === "text")?.map?.((b) => b?.text ?? "")?.join("\n") || ""
+                  return (
+                    <div
+                      key={i}
+                      className={
+                        message.role === "user"
                         ? "flex justify-end"
                         : "flex justify-start"
-                    }
-                  >
-                    <div
-                      className={
-                        m.role === "user"
-                          ? "max-w-[80%] rounded-2xl rounded-tr-sm bg-orange-500 px-4 py-2 text-sm text-white"
-                          : "max-w-[85%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm text-gray-800 whitespace-pre-wrap"
                       }
                     >
-                      {m.content}
+                      <div
+                        className={
+                          message.role === "user"
+                          ? "max-w-[80%] rounded-2xl rounded-tr-sm bg-orange-500 px-4 py-2 text-sm text-white"
+                          : "max-w-[85%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm text-gray-800 whitespace-pre-wrap"
+                        }
+                      >
+                        {text}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2">
