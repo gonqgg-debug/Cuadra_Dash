@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 
 const SERVER =
   import.meta.env.VITE_SERVER_URL ||
@@ -14,43 +14,37 @@ const WIDGET_URLS = {
 }
 
 export function WidgetFrame({ toolName, data }) {
-  const iframeRef = useRef(null)
+  const [html, setHtml] = useState("")
   const url = WIDGET_URLS[toolName]
 
-  const sendData = () => {
-    const payload = {
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: data ?? {} },
-    }
-    iframeRef.current?.contentWindow?.postMessage(payload, "*")
-  }
-
   useEffect(() => {
-    if (!url || !iframeRef.current?.contentWindow) return
-    sendData()
+    if (!url) return
+    fetch(url)
+      .then((r) => r.text())
+      .then((text) => {
+        const injected = text.replace(
+          "</body>",
+          `<script>
+            window.__WIDGET_DATA__ = ${JSON.stringify(data ?? {})};
+            if (typeof render === 'function') render(window.__WIDGET_DATA__);
+            else document.addEventListener('DOMContentLoaded', () => {
+              if (typeof render === 'function') render(window.__WIDGET_DATA__);
+            });
+          </script></body>`
+        )
+        setHtml(injected)
+      })
   }, [url, data])
 
   if (!url) return null
-
-  const handleLoad = () => {
-    sendData()
-  }
+  if (!html) return (
+    <div className="my-2 h-40 rounded-xl bg-gray-50 animate-pulse" />
+  )
 
   return (
     <div
       className="my-2 w-full overflow-hidden rounded-xl border border-gray-200 shadow-sm"
-      style={{ minHeight: 200 }}
-    >
-      <iframe
-        ref={iframeRef}
-        src={url}
-        onLoad={handleLoad}
-        className="w-full"
-        style={{ height: 320, border: "none" }}
-        sandbox="allow-scripts allow-same-origin"
-        title={`Widget ${toolName}`}
-      />
-    </div>
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
