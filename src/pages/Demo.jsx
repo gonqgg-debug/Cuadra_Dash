@@ -108,7 +108,19 @@ export function Demo() {
       const tool = toolUse?.name || ""
 
       if (WIDGET_TOOLS.includes(tool)) {
-        const widgetData = toolUse?.input || parsed
+        // Para widgets, combinar el input del tool (que tiene quotes)
+        // con el structuredContent del result (que puede tener coberturas_tabla)
+        let structuredContent = null
+        try {
+          const resultText = toolResult?.content?.[0]?.text || "{}"
+          const resultParsed = JSON.parse(resultText)
+          structuredContent = resultParsed?.structuredContent || resultParsed
+        } catch {}
+
+        const widgetData = {
+          ...(toolUse?.input || {}),
+          ...(structuredContent || {}),
+        }
         setMessages((prev) => [
           ...prev,
           { role: "widget", toolName: tool, data: widgetData },
