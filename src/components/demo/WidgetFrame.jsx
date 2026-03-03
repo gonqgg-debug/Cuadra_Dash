@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 const SERVER = import.meta.env.VITE_SERVER_URL || "https://cuadrainsurance-production.up.railway.app"
 
@@ -12,40 +12,26 @@ const WIDGET_URLS = {
 }
 
 export function WidgetFrame({ toolName, data }) {
+  const iframeRef = useRef(null)
   const [htmlContent, setHtmlContent] = useState(null)
   const url = WIDGET_URLS[toolName]
 
   useEffect(() => {
-    if (!url || !data) return
-
+    if (!url) return
     fetch(url)
       .then(r => r.text())
-      .then(html => {
-        const dataJson = JSON.stringify(data)
-        const injected = html.replace(
-          "</body>",
-          `<script>
-    (function() {
-      var data = ${dataJson};
-      function tryRender() {
-        if (typeof render === 'function') {
-          render(data);
-        } else if (typeof window.render === 'function') {
-          window.render(data);
-        }
-      }
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryRender);
-      } else {
-        tryRender();
-      }
-    })();
-  </script></body>`
-        )
-        setHtmlContent(injected)
-      })
+      .then(html => setHtmlContent(html))
       .catch(console.error)
-  }, [url, JSON.stringify(data)])
+  }, [url])
+
+  const handleLoad = () => {
+    if (!iframeRef.current || !data) return
+    iframeRef.current.contentWindow?.postMessage({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: { structuredContent: data }
+    }, "*")
+  }
 
   if (!htmlContent) return (
     <div className="h-48 bg-gray-50 rounded-xl animate-pulse border border-gray-100" />
@@ -54,7 +40,9 @@ export function WidgetFrame({ toolName, data }) {
   return (
     <div className="w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm my-2">
       <iframe
+        ref={iframeRef}
         srcDoc={htmlContent}
+        onLoad={handleLoad}
         className="w-full"
         style={{ height: 340, border: "none" }}
         sandbox="allow-scripts"
