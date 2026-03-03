@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react"
 
-const SERVER =
-  import.meta.env.VITE_SERVER_URL ||
-  "https://cuadrainsurance-production.up.railway.app"
+const SERVER = import.meta.env.VITE_SERVER_URL || "https://cuadrainsurance-production.up.railway.app"
 
 const WIDGET_URLS = {
   render_quotes_widget: `${SERVER}/widget/quote-widget.html`,
@@ -14,37 +12,46 @@ const WIDGET_URLS = {
 }
 
 export function WidgetFrame({ toolName, data }) {
-  const [html, setHtml] = useState("")
+  const [blobUrl, setBlobUrl] = useState(null)
   const url = WIDGET_URLS[toolName]
 
   useEffect(() => {
-    if (!url) return
-    fetch(url)
-      .then((r) => r.text())
-      .then((text) => {
-        const injected = text.replace(
-          "</body>",
-          `<script>
-            window.__WIDGET_DATA__ = ${JSON.stringify(data ?? {})};
-            if (typeof render === 'function') render(window.__WIDGET_DATA__);
-            else document.addEventListener('DOMContentLoaded', () => {
-              if (typeof render === 'function') render(window.__WIDGET_DATA__);
-            });
-          </script></body>`
-        )
-        setHtml(injected)
-      })
-  }, [url, data])
+    if (!url || !data) return
 
-  if (!url) return null
-  if (!html) return (
-    <div className="my-2 h-40 rounded-xl bg-gray-50 animate-pulse" />
+    fetch(url)
+      .then(r => r.text())
+      .then(html => {
+        const injected = html.replace(
+          "<head>",
+          `<head><script>window.__WIDGET_DATA__ = ${JSON.stringify(data)};</script>`
+        )
+        const blob = new Blob([injected], { type: "text/html" })
+        const objectUrl = URL.createObjectURL(blob)
+        setBlobUrl(prev => {
+          if (prev) URL.revokeObjectURL(prev)
+          return objectUrl
+        })
+      })
+      .catch(console.error)
+
+    return () => setBlobUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+  }, [url, JSON.stringify(data)])
+
+  if (!blobUrl) return (
+    <div className="h-48 bg-gray-50 rounded-xl animate-pulse border border-gray-100" />
   )
 
   return (
-    <div
-      className="my-2 w-full overflow-hidden rounded-xl border border-gray-200 shadow-sm"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm my-2">
+      <iframe
+        src={blobUrl}
+        className="w-full"
+        style={{ height: 340, border: "none" }}
+        sandbox="allow-scripts"
+      />
+    </div>
   )
 }
