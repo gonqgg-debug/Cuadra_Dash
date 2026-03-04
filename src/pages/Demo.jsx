@@ -292,11 +292,7 @@ export function Demo() {
           ? [
               ...pendingImages.map((img) => ({
                 type: "image",
-                source: {
-                  type: img.source.type,
-                  media_type: img.source.media_type,
-                  data: img.source.data,
-                },
+                source: img.source,
               })),
               { type: "text", text: userText || "" },
             ]
@@ -322,15 +318,9 @@ export function Demo() {
         const cleanHistory = newHistory.filter(
           (msg) => msg.role === "user" || msg.role === "assistant"
         )
-        console.log("RAW pendingImages[0]:", JSON.stringify(pendingImages[0], null, 2))
-        console.log(
-          "RAW userContent[0]:",
-          JSON.stringify(
-            Array.isArray(userContent) ? userContent[0] : "string",
-            null,
-            2
-          )
-        )
+        console.log("userContent[0] final:", JSON.stringify(
+          Array.isArray(userContent) ? userContent[0] : "string"
+        , null, 2))
         const res = await fetch(`${SERVER}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
