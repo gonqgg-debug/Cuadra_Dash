@@ -105,6 +105,15 @@ export function Demo() {
     setLastResult(null)
   }
 
+  const normalizeMediaType = (type) => {
+    if (type === "image/jpg") return "image/jpeg"
+    if (
+      !["image/jpeg", "image/png", "image/gif", "image/webp"].includes(type)
+    )
+      return "image/jpeg"
+    return type
+  }
+
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files || [])
     const converted = await Promise.all(
@@ -117,7 +126,7 @@ export function Demo() {
                 type: "image",
                 source: {
                   type: "base64",
-                  media_type: file.type,
+                  media_type: normalizeMediaType(file.type),
                   data: reader.result.split(",")[1],
                 },
                 preview: reader.result,
