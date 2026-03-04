@@ -52,6 +52,7 @@ export function Demo() {
   const [localEvents, setLocalEvents] = useState([])
   const [lastResult, setLastResult] = useState(null)
   const [fnolData, setFnolData] = useState(null)
+  const [fnolImages, setFnolImages] = useState([])
   const [connected, setConnected] = useState(false)
   const [pendingImages, setPendingImages] = useState([])
   const messagesEndRef = useRef(null)
@@ -106,6 +107,7 @@ export function Demo() {
     setLocalEvents([])
     setLastResult(null)
     setFnolData(null)
+    setFnolImages([])
   }
 
   const handleImageUpload = async (e) => {
@@ -214,6 +216,10 @@ export function Demo() {
           ...prev,
           { role: "widget", toolName: tool, data: widgetData },
         ])
+        if (tool === "render_siniestro_widget") {
+          setFnolData(widgetData)
+          setFnolImages(lastSentImagesRef.current || [])
+        }
       }
 
       if (tool === "get_auto_quotes") {
@@ -255,6 +261,7 @@ export function Demo() {
           const data = { ...(toolUse?.input || {}), ...(parsed || {}) }
           console.log("fnolData actual:", data)
           setFnolData(data)
+          setFnolImages(lastSentImagesRef.current || [])
           setLastResult({
             tool: "report_siniestro",
             folio: parsed?.folio ?? parsed?.folioSiniestro ?? "SIN-XXXX",
@@ -666,7 +673,7 @@ export function Demo() {
               <button
                 type="button"
                 onClick={() => {
-                  const doc = generateFNOLReport(fnolData, [])
+                  const doc = generateFNOLReport(fnolData, fnolImages)
                   doc.save(`FNOL-${fnolData.folio}.pdf`)
                 }}
                 className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
