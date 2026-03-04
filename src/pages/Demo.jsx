@@ -105,37 +105,39 @@ export function Demo() {
     setLastResult(null)
   }
 
-  const normalizeMediaType = (type) => {
-    if (type === "image/jpg") return "image/jpeg"
-    if (
-      !["image/jpeg", "image/png", "image/gif", "image/webp"].includes(type)
-    )
-      return "image/jpeg"
-    return type
-  }
-
   const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files || [])
+    const files = Array.from(e.target.files)
+
+    const normalizeMediaType = (type) => {
+      if (type === "image/jpg") return "image/jpeg"
+      if (
+        !["image/jpeg", "image/png", "image/gif", "image/webp"].includes(type)
+      )
+        return "image/jpeg"
+      return type
+    }
+
     const converted = await Promise.all(
       files.map(
         (file) =>
           new Promise((resolve) => {
             const reader = new FileReader()
-            reader.onload = () =>
+            reader.onload = () => {
+              const base64 = reader.result.split(",")[1]
               resolve({
                 source: {
                   type: "base64",
                   media_type: normalizeMediaType(file.type),
-                  data: reader.result.split(",")[1],
+                  data: base64,
                 },
                 preview: reader.result,
               })
+            }
             reader.readAsDataURL(file)
           })
       )
     )
     setPendingImages((prev) => [...prev, ...converted])
-    e.target.value = ""
   }
 
   const addEvent = useCallback((tool, summary, extra = {}) => {
@@ -291,7 +293,7 @@ export function Demo() {
               ...pendingImages.map((img) => ({
                 type: "image",
                 source: {
-                  type: "base64",
+                  type: img.source.type,
                   media_type: img.source.media_type,
                   data: img.source.data,
                 },
