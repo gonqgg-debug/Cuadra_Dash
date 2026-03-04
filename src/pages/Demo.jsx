@@ -112,10 +112,25 @@ export function Demo() {
         // con el structuredContent del result (que puede tener coberturas_tabla)
         let structuredContent = null
         try {
-          const resultText = toolResult?.content?.[0]?.text || "{}"
+          // El content puede ser string o array
+          const content = toolResult?.content
+          let resultText = ""
+          if (typeof content === "string") {
+            resultText = content
+          } else if (Array.isArray(content)) {
+            resultText = content[0]?.text || content[0]?.json || ""
+          }
+
+          // Intentar parsear el texto
           const resultParsed = JSON.parse(resultText)
-          structuredContent = resultParsed?.structuredContent || resultParsed
+
+          // structuredContent puede venir directo o anidado
+          structuredContent =
+            resultParsed?.structuredContent ||
+            (resultParsed?.quotes ? resultParsed : resultParsed)
         } catch {}
+
+        console.log("toolResult raw:", JSON.stringify(toolResult, null, 2))
 
         const widgetData = {
           ...(toolUse?.input || {}),
