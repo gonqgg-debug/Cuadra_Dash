@@ -54,6 +54,7 @@ export function Demo() {
   const [pendingImages, setPendingImages] = useState([])
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
+  const lastSentImagesRef = useRef([])
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -66,14 +67,32 @@ export function Demo() {
   // SSE para estado Live/Offline
   useEffect(() => {
     if (!SERVER) return
-    const url = `${SERVER}/events`
-    const es = new EventSource(url)
-    es.onopen = () => setConnected(true)
-    es.onerror = () => setConnected(false)
-    return () => {
-      es.close()
-      setConnected(false)
+    let lastPoll = new Date().toISOString()
+
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `${SERVER}/dashboard/events/poll?since=${lastPoll}`
+        )
+        if (!res.ok) return
+        const { events, serverTime } = await res.json()
+
+        if (events?.length > 0) {
+          setLocalEvents((prev) =>
+            [...events.reverse(), ...prev].slice(0, 20)
+          )
+        }
+
+        if (serverTime) lastPoll = serverTime
+        setConnected(true)
+      } catch {
+        setConnected(false)
+      }
     }
+
+    poll()
+    const interval = setInterval(poll, 3000)
+    return () => clearInterval(interval)
   }, [])
 
   const handleReset = () => {
@@ -220,12 +239,29 @@ export function Demo() {
             quotes: parsed?.quotes ?? parsed?.cotizaciones ?? [],
           })
         } else if (tool === "report_siniestro") {
+          const fnolData = { ...(toolUse?.input || {}), ...(parsed || {}) }
           setLastResult({
             tool: "report_siniestro",
             folio: parsed?.folio ?? parsed?.folioSiniestro ?? "SIN-XXXX",
             timeline: parsed?.timeline ?? parsed?.pasos ?? [],
             siguientePaso: parsed?.siguientePaso ?? parsed?.nextStep ?? "",
           })
+          fetch(`${SERVER}/fnol`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              folio: fnolData.folio,
+              tipo: fnolData.tipo,
+              descripcion: fnolData.descripcion,
+              nombre: fnolData.nombre,
+              poliza_numero: fnolData.poliza_numero,
+              lugar: fnolData.lugar,
+              fecha: fnolData.fecha,
+              lesionados: fnolData.lesionados,
+              ai_analysis: fnolData.ai_analysis,
+              imagen_urls: lastSentImagesRef.current || [],
+            }),
+          }).catch(console.error)
         } else {
           setLastResult({ tool, data: parsed })
         }
@@ -260,6 +296,7 @@ export function Demo() {
           images: pendingImages.map((i) => i.preview),
         },
       ])
+      lastSentImagesRef.current = pendingImages.map((i) => i.preview).slice(0, 4)
       setPendingImages([])
 
       const newHistory = [...history, { role: "user", content: userContent }]
