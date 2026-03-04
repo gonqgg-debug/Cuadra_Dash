@@ -6,6 +6,7 @@ import { StatCard } from "@/components/dashboard/StatCard"
 import { LiveFeed } from "@/components/dashboard/LiveFeed"
 import { WidgetFrame } from "@/components/demo/WidgetFrame"
 import { formatCurrency } from "@/lib/utils"
+import { generateFNOLReport } from "@/utils/generateFNOL"
 import { CheckCircle2, Loader2, Circle, Paperclip } from "lucide-react"
 
 const SERVER =
@@ -50,6 +51,7 @@ export function Demo() {
   })
   const [localEvents, setLocalEvents] = useState([])
   const [lastResult, setLastResult] = useState(null)
+  const [fnolData, setFnolData] = useState(null)
   const [connected, setConnected] = useState(false)
   const [pendingImages, setPendingImages] = useState([])
   const messagesEndRef = useRef(null)
@@ -103,6 +105,7 @@ export function Demo() {
     setKpis({ cotizaciones: 0, siniestros: 0, primaTotal: 0 })
     setLocalEvents([])
     setLastResult(null)
+    setFnolData(null)
   }
 
   const handleImageUpload = async (e) => {
@@ -249,8 +252,9 @@ export function Demo() {
             quotes: parsed?.quotes ?? parsed?.cotizaciones ?? [],
           })
         } else if (tool === "report_siniestro") {
-          const fnolData = { ...(toolUse?.input || {}), ...(parsed || {}) }
-          console.log("fnolData actual:", fnolData)
+          const data = { ...(toolUse?.input || {}), ...(parsed || {}) }
+          console.log("fnolData actual:", data)
+          setFnolData(data)
           setLastResult({
             tool: "report_siniestro",
             folio: parsed?.folio ?? parsed?.folioSiniestro ?? "SIN-XXXX",
@@ -261,15 +265,15 @@ export function Demo() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              folio: fnolData.folio,
-              tipo: fnolData.tipo,
-              descripcion: fnolData.descripcion,
-              nombre: fnolData.nombre,
-              poliza_numero: fnolData.poliza_numero,
-              lugar: fnolData.lugar,
-              fecha: fnolData.fecha,
-              lesionados: fnolData.lesionados,
-              ai_analysis: fnolData.ai_analysis,
+              folio: data.folio,
+              tipo: data.tipo,
+              descripcion: data.descripcion,
+              nombre: data.nombre,
+              poliza_numero: data.poliza_numero,
+              lugar: data.lugar,
+              fecha: data.fecha,
+              lesionados: data.lesionados,
+              ai_analysis: data.ai_analysis,
               imagen_urls: lastSentImagesRef.current || [],
             }),
           }).catch(console.error)
@@ -646,6 +650,34 @@ export function Demo() {
               </div>
             </div>
           </div>
+
+          {fnolData && (
+            <div className="mb-4 rounded-xl border border-orange-200 bg-white p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Siniestro reportado
+                  </p>
+                  <p className="mt-0.5 text-xl font-bold text-orange-500">
+                    {fnolData.folio}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const doc = generateFNOLReport(fnolData, [])
+                  doc.save(`FNOL-${fnolData.folio}.pdf`)
+                }}
+                className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+              >
+                ↓ Descargar Reporte FNOL
+              </button>
+              <p className="mt-2 text-center text-xs text-gray-400">
+                En producción: envío automático a ajustadores
+              </p>
+            </div>
+          )}
 
           <Card className="border-gray-200 bg-white shadow-sm">
             <CardHeader className="p-4 pb-2">
