@@ -216,10 +216,6 @@ export function Demo() {
           ...prev,
           { role: "widget", toolName: tool, data: widgetData },
         ])
-        if (tool === "render_siniestro_widget") {
-          setFnolData(widgetData)
-          setFnolImages(lastSentImagesRef.current || [])
-        }
       }
 
       if (tool === "get_auto_quotes") {
@@ -260,8 +256,6 @@ export function Demo() {
         } else if (tool === "report_siniestro") {
           const data = { ...(toolUse?.input || {}), ...(parsed || {}) }
           console.log("fnolData actual:", data)
-          setFnolData(data)
-          setFnolImages(lastSentImagesRef.current || [])
           setLastResult({
             tool: "report_siniestro",
             folio: parsed?.folio ?? parsed?.folioSiniestro ?? "SIN-XXXX",
@@ -408,8 +402,30 @@ export function Demo() {
           { role: "assistant", content: assistantContent },
         ])
 
+        let fnolAccum = {}
         toolUses.forEach((toolUse, i) => {
-          handleToolResult(toolUse, toolResults[i] ?? {}, data.content)
+          const tool = toolUse?.name || ""
+          const toolResult = toolResults[i] ?? {}
+          let parsed = {}
+          try {
+            const text = toolResult?.content?.[0]?.text || "{}"
+            parsed = JSON.parse(text)
+          } catch {}
+
+          if (tool === "report_siniestro") {
+            fnolAccum = {
+              ...fnolAccum,
+              ...(toolUse.input || {}),
+              ...(parsed || {}),
+            }
+          }
+          if (tool === "render_siniestro_widget") {
+            fnolAccum = { ...fnolAccum, ...(toolUse.input || {}) }
+            setFnolData(fnolAccum)
+            setFnolImages(lastSentImagesRef.current || [])
+          }
+
+          handleToolResult(toolUse, toolResult, data.content)
         })
       } catch (err) {
         console.warn("Chat error:", err)

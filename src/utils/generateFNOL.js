@@ -214,7 +214,8 @@ export function generateFNOLReport(siniestroData, images = []) {
     doc.roundedRect(margin, y, W - margin * 2, 7, 1, 1, "FD")
     doc.setTextColor(203, 213, 224)
     doc.setFontSize(8)
-    doc.text("☐", margin + 3, y + 5)
+    doc.setFont("helvetica", "normal")
+    doc.text("[ ]", margin + 3, y + 5)
     doc.setTextColor(...dark)
     doc.text(d, margin + 9, y + 5)
     y += 9
