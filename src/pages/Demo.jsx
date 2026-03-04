@@ -6,7 +6,7 @@ import { StatCard } from "@/components/dashboard/StatCard"
 import { LiveFeed } from "@/components/dashboard/LiveFeed"
 import { WidgetFrame } from "@/components/demo/WidgetFrame"
 import { formatCurrency } from "@/lib/utils"
-import { CheckCircle2, Loader2, Circle } from "lucide-react"
+import { CheckCircle2, Loader2, Circle, Paperclip } from "lucide-react"
 
 const SERVER =
   import.meta.env.VITE_SERVER_URL ||
@@ -51,7 +51,9 @@ export function Demo() {
   const [localEvents, setLocalEvents] = useState([])
   const [lastResult, setLastResult] = useState(null)
   const [connected, setConnected] = useState(false)
+  const [pendingImages, setPendingImages] = useState([])
   const messagesEndRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -78,9 +80,35 @@ export function Demo() {
     setMessages([])
     setHistory([])
     setInput("")
+    setPendingImages([])
     setKpis({ cotizaciones: 0, siniestros: 0, primaTotal: 0 })
     setLocalEvents([])
     setLastResult(null)
+  }
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files || [])
+    const converted = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () =>
+              resolve({
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: file.type,
+                  data: reader.result.split(",")[1],
+                },
+                preview: reader.result,
+              })
+            reader.readAsDataURL(file)
+          })
+      )
+    )
+    setPendingImages((prev) => [...prev, ...converted])
+    e.target.value = ""
   }
 
   const addEvent = useCallback((tool, summary, extra = {}) => {
@@ -209,14 +237,32 @@ export function Demo() {
   const handleSend = useCallback(
     async (text) => {
       const userText = text || input.trim()
-      if (!userText || isLoading) return
+      const hasContent = userText || pendingImages.length > 0
+      if (!hasContent || isLoading) return
       setInput("")
 
-      setMessages((prev) => [...prev, { role: "user", content: userText }])
-      const newHistory = [
-        ...history,
-        { role: "user", content: userText },
-      ]
+      const userContent =
+        pendingImages.length > 0
+          ? [
+              ...pendingImages.map((img) => ({
+                type: "image",
+                source: img.source,
+              })),
+              { type: "text", text: userText || "" },
+            ]
+          : userText
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: userText || `📷 ${pendingImages.length} foto(s)`,
+          images: pendingImages.map((i) => i.preview),
+        },
+      ])
+      setPendingImages([])
+
+      const newHistory = [...history, { role: "user", content: userContent }]
       setHistory(newHistory)
       setIsLoading(true)
       setLastResult(null)
@@ -312,7 +358,7 @@ export function Demo() {
         setIsLoading(false)
       }
     },
-    [input, isLoading, history, handleToolResult]
+    [input, isLoading, history, handleToolResult, pendingImages]
   )
 
   return (
@@ -383,7 +429,15 @@ export function Demo() {
                 {messages.map((message, i) => {
                   if (message.role === "user") {
                     return (
-                      <div key={i} className="flex justify-end">
+                      <div key={i} className="flex flex-col items-end gap-1">
+                        {message.images?.map((src, j) => (
+                          <img
+                            key={j}
+                            src={src}
+                            alt=""
+                            className="mt-1 max-w-xs rounded-lg border border-gray-200"
+                          />
+                        ))}
                         <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-orange-500 px-4 py-2 text-sm text-white">
                           {message.content}
                         </div>
@@ -440,23 +494,68 @@ export function Demo() {
             )}
           </div>
 
-          <div className="flex shrink-0 gap-2 border-t border-gray-100 px-4 py-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Escribe tu pregunta..."
-              disabled={isLoading}
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-400 focus:outline-none disabled:opacity-50"
-            />
-            <Button
-              onClick={() => handleSend()}
-              disabled={isLoading || !input.trim()}
-              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
-            >
-              Enviar
-            </Button>
+          <div className="flex shrink-0 flex-col border-t border-gray-100">
+            {pendingImages.length > 0 && (
+              <div className="flex gap-2 px-4 py-2">
+                {pendingImages.map((img, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={img.preview}
+                      alt=""
+                      className="h-16 w-16 rounded-lg border border-gray-200 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingImages((prev) =>
+                          prev.filter((_, j) => j !== i)
+                        )
+                      }
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-gray-800 text-xs text-white"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 px-4 py-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:border-orange-300 hover:text-orange-600 disabled:opacity-50"
+              >
+                <Paperclip className="h-5 w-5" />
+              </button>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Escribe tu pregunta..."
+                disabled={isLoading}
+                className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-400 focus:outline-none disabled:opacity-50"
+              />
+              <Button
+                onClick={() => handleSend()}
+                disabled={
+                  isLoading ||
+                  (!input.trim() && pendingImages.length === 0)
+                }
+                className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+              >
+                Enviar
+              </Button>
+            </div>
           </div>
         </div>
 
