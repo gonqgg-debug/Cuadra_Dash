@@ -123,7 +123,6 @@ export function Demo() {
             const reader = new FileReader()
             reader.onload = () =>
               resolve({
-                type: "image",
                 source: {
                   type: "base64",
                   media_type: normalizeMediaType(file.type),
@@ -291,7 +290,11 @@ export function Demo() {
           ? [
               ...pendingImages.map((img) => ({
                 type: "image",
-                source: img.source,
+                source: {
+                  type: "base64",
+                  media_type: img.source.media_type,
+                  data: img.source.data,
+                },
               })),
               { type: "text", text: userText || "" },
             ]
