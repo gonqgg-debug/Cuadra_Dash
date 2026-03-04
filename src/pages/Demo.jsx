@@ -96,7 +96,7 @@ export function Demo() {
   }, [])
 
   const handleToolResult = useCallback(
-    (toolUse, toolResult) => {
+    (toolUse, toolResult, allContent) => {
       let parsed = null
       try {
         const text = toolResult?.content?.[0]?.text || ""
@@ -110,24 +110,35 @@ export function Demo() {
       if (WIDGET_TOOLS.includes(tool)) {
         // Para widgets, combinar el input del tool (que tiene quotes)
         // con el structuredContent del result (que puede tener coberturas_tabla)
+        // Para render_quotes_widget, el resultado viene del get_auto_quotes previo
         let structuredContent = null
         try {
-          // El content puede ser string o array
-          const content = toolResult?.content
-          let resultText = ""
-          if (typeof content === "string") {
-            resultText = content
-          } else if (Array.isArray(content)) {
-            resultText = content[0]?.text || content[0]?.json || ""
-          }
+          const content = allContent || []
+          const allToolResults =
+            content.filter((b) => b.type === "mcp_tool_result") || []
 
-          // Intentar parsear el texto
+          // Encontrar el tool_result que corresponde por tool_use_id
+          const matchingResult = allToolResults.find(
+            (r) => r.tool_use_id === toolUse.id
+          )
+
+          // Si no hay match (render_widgets no tienen result propio),
+          // usar el primer tool_result que tenga quotes/coberturas_tabla
+          const resultToUse =
+            matchingResult ||
+            allToolResults.find((r) => {
+              try {
+                const parsed = JSON.parse(r?.content?.[0]?.text || "{}")
+                return parsed.coberturas_tabla || parsed.quotes
+              } catch {
+                return false
+              }
+            })
+
+          const resultText = resultToUse?.content?.[0]?.text || "{}"
           const resultParsed = JSON.parse(resultText)
-
-          // structuredContent puede venir directo o anidado
           structuredContent =
-            resultParsed?.structuredContent ||
-            (resultParsed?.quotes ? resultParsed : resultParsed)
+            resultParsed?.structuredContent || resultParsed
         } catch {}
 
         console.log("toolResult raw:", JSON.stringify(toolResult, null, 2))
@@ -251,7 +262,7 @@ export function Demo() {
         ])
 
         toolUses.forEach((toolUse, i) => {
-          handleToolResult(toolUse, toolResults[i] ?? {})
+          handleToolResult(toolUse, toolResults[i] ?? {}, data.content)
         })
       } catch (err) {
         console.warn("Chat error:", err)
