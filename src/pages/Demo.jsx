@@ -322,19 +322,11 @@ export function Demo() {
         const cleanHistory = newHistory.filter(
           (msg) => msg.role === "user" || msg.role === "assistant"
         )
+        console.log("RAW pendingImages[0]:", JSON.stringify(pendingImages[0], null, 2))
         console.log(
-          "Content siendo enviado:",
+          "RAW userContent[0]:",
           JSON.stringify(
-            cleanHistory.map((m) => ({
-              role: m.role,
-              content: Array.isArray(m.content)
-                ? m.content.map((b) => ({
-                    type: b.type,
-                    media_type: b.source?.media_type,
-                    dataLength: b.source?.data?.length,
-                  }))
-                : m.content?.substring(0, 50),
-            })),
+            Array.isArray(userContent) ? userContent[0] : "string",
             null,
             2
           )
