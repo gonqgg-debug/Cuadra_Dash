@@ -226,17 +226,21 @@ export function generateFNOLReport(siniestroData, images = []) {
   y += 6
 
   // ── 6. FOTOS ADJUNTAS ───────────────────────────────
+  console.log("Imágenes recibidas en FNOL:", images?.length, images?.[0])
   if (images.length > 0) {
     y = sectionHeader("6. Evidencia Fotográfica Adjunta", y)
     let imgX = margin
     images.slice(0, 4).forEach((img, i) => {
-      const imgData = typeof img === "string" ? img : img?.preview
-      const label = typeof img === "object" && img?.tag ? img.tag : `Foto ${i + 1}`
       try {
+        // img es { preview, tag } — usar img.preview para el base64
+        const imgData = typeof img === "string" ? img : img.preview
+        const imgTag =
+          typeof img === "string" ? `Foto ${i + 1}` : (img.tag || `Foto ${i + 1}`)
+
         doc.addImage(imgData, "JPEG", imgX, y, 38, 28)
         doc.setFontSize(7)
         doc.setTextColor(...gray)
-        doc.text(label, imgX + 19, y + 31, { align: "center" })
+        doc.text(imgTag, imgX + 19, y + 31, { align: "center" })
         imgX += 42
       } catch (e) {
         console.warn("Error adding image to PDF:", e)
