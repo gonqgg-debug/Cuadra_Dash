@@ -222,10 +222,13 @@ export function Demo() {
       setLastResult(null)
 
       try {
+        const cleanHistory = newHistory.filter(
+          (msg) => msg.role === "user" || msg.role === "assistant"
+        )
         const res = await fetch(`${SERVER}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: newHistory }),
+          body: JSON.stringify({ messages: cleanHistory }),
         })
 
         if (!res.ok) {
