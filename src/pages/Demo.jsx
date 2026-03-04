@@ -256,12 +256,14 @@ export function Demo() {
             { role: "assistant", content: textContent },
           ])
         }
+        const assistantContent =
+          data.content
+            ?.filter((b) => b.type === "text")
+            ?.map((b) => b?.text ?? "")
+            ?.join("\n") || ""
         setHistory((prev) => [
           ...prev,
-          {
-            role: "assistant",
-            content: assistantBlocks.length > 0 ? assistantBlocks : textContent,
-          },
+          { role: "assistant", content: assistantContent },
         ])
 
         toolUses.forEach((toolUse, i) => {
