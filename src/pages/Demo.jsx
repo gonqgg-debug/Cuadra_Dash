@@ -317,6 +317,23 @@ export function Demo() {
         const cleanHistory = newHistory.filter(
           (msg) => msg.role === "user" || msg.role === "assistant"
         )
+        console.log(
+          "Content siendo enviado:",
+          JSON.stringify(
+            cleanHistory.map((m) => ({
+              role: m.role,
+              content: Array.isArray(m.content)
+                ? m.content.map((b) => ({
+                    type: b.type,
+                    media_type: b.source?.media_type,
+                    dataLength: b.source?.data?.length,
+                  }))
+                : m.content?.substring(0, 50),
+            })),
+            null,
+            2
+          )
+        )
         const res = await fetch(`${SERVER}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
