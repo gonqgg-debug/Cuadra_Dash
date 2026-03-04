@@ -291,12 +291,14 @@ export function Demo() {
       const userText = text || input.trim()
       const hasContent = userText || pendingImages.length > 0
       if (!hasContent || isLoading) return
+
+      const sessionImages = [...pendingImages]
       setInput("")
 
       const userContent =
-        pendingImages.length > 0
+        sessionImages.length > 0
           ? [
-              ...pendingImages.map((img) => ({
+              ...sessionImages.map((img) => ({
                 type: "image",
                 source: img.source,
               })),
@@ -308,11 +310,11 @@ export function Demo() {
         ...prev,
         {
           role: "user",
-          content: userText || `📷 ${pendingImages.length} foto(s)`,
-          images: pendingImages.map((i) => i.preview),
+          content: userText || `📷 ${sessionImages.length} foto(s)`,
+          images: sessionImages.map((i) => i.preview),
         },
       ])
-      lastSentImagesRef.current = pendingImages.map((i) => i.preview).slice(0, 4)
+      lastSentImagesRef.current = sessionImages.map((i) => i.preview).slice(0, 4)
       setPendingImages([])
 
       const newHistory = [...history, { role: "user", content: userContent }]
@@ -422,7 +424,7 @@ export function Demo() {
           if (tool === "render_siniestro_widget") {
             fnolAccum = { ...fnolAccum, ...(toolUse.input || {}) }
             setFnolData(fnolAccum)
-            setFnolImages(lastSentImagesRef.current || [])
+            setFnolImages(sessionImages.map((img) => img.preview))
           }
 
           handleToolResult(toolUse, toolResult, data.content)
