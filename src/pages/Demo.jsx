@@ -250,6 +250,7 @@ export function Demo() {
           })
         } else if (tool === "report_siniestro") {
           const fnolData = { ...(toolUse?.input || {}), ...(parsed || {}) }
+          console.log("fnolData actual:", fnolData)
           setLastResult({
             tool: "report_siniestro",
             folio: parsed?.folio ?? parsed?.folioSiniestro ?? "SIN-XXXX",
@@ -332,6 +333,12 @@ export function Demo() {
         }
 
         const data = await res.json()
+        console.log(
+          "Tools ejecutados:",
+          data.content
+            ?.filter((b) => b.type === "mcp_tool_use")
+            ?.map((b) => ({ name: b.name, input: b.input }))
+        )
         const assistantBlocks = Array.isArray(data.content) ? data.content : []
         const textContent =
           assistantBlocks
