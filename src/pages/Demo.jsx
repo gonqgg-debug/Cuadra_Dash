@@ -294,7 +294,7 @@ export function Demo() {
                 type: "image",
                 source: img.source,
               })),
-              { type: "text", text: userText || "" },
+              ...(userText.trim() ? [{ type: "text", text: userText }] : []),
             ]
           : userText
 
