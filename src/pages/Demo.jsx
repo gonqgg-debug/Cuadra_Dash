@@ -313,7 +313,7 @@ export function Demo() {
       {/* BODY */}
       <div className="flex flex-1 overflow-hidden">
         {/* Panel izquierdo — Chat */}
-        <div className="flex w-[42%] flex-col border-r border-gray-200 bg-white">
+        <div className="flex w-[55%] flex-col border-r border-gray-200 bg-white">
           <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 px-4 py-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500">
               <span className="text-sm font-bold text-white">C</span>
@@ -428,7 +428,7 @@ export function Demo() {
         </div>
 
         {/* Panel derecho — Dashboard */}
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+        <div className="flex w-[45%] flex-col gap-4 overflow-y-auto p-6">
           <div className="grid grid-cols-2 gap-4">
             <StatCard
               label="Cotizaciones"
