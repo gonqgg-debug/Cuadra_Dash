@@ -256,11 +256,39 @@ export function Demo() {
             { role: "assistant", content: textContent },
           ])
         }
-        const assistantContent =
-          data.content
-            ?.filter((b) => b.type === "text")
-            ?.map((b) => b?.text ?? "")
-            ?.join("\n") || ""
+        // Extraer texto de la respuesta
+        const textBlocks =
+          data.content?.filter((b) => b.type === "text") || []
+
+        // Construir contenido del asistente incluyendo contexto de tools
+        let assistantContent = textBlocks.map((b) => b?.text ?? "").join("\n")
+
+        // Si hubo tool calls, agregar resumen para que Claude recuerde el contexto
+        if (toolUses.length > 0) {
+          const toolSummary = toolUses
+            .map((t) => {
+              if (
+                t.name === "render_quotes_widget" ||
+                t.name === "get_auto_quotes"
+              ) {
+                const quotes = t.input?.quotes || []
+                const tipo = t.input?.tipo || "auto"
+                const aseguradora = quotes[0]?.aseguradora || ""
+                const planesStr = quotes
+                  .map(
+                    (q) =>
+                      `${q.plan || q.aseguradora}: $${q.precio_anual ?? q.precio ?? 0}/año`
+                  )
+                  .join(", ")
+                return `[Ya mostré cotizaciones de ${aseguradora} para seguro de ${tipo}: ${planesStr}]`
+              }
+              return `[Ejecuté: ${t.name}]`
+            })
+            .join("\n")
+
+          assistantContent = assistantContent + "\n" + toolSummary
+        }
+
         setHistory((prev) => [
           ...prev,
           { role: "assistant", content: assistantContent },
