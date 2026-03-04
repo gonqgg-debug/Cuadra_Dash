@@ -30,6 +30,7 @@ const QUICK_PROMPTS = [
 
 async function classifyImage(base64Data) {
   try {
+    console.log("Clasificando imagen...")
     const res = await fetch(`${SERVER}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -57,7 +58,9 @@ async function classifyImage(base64Data) {
           "Eres un clasificador de imágenes para seguros. Responde solo con la categoría.",
       }),
     })
+    console.log("Classify response status:", res.status)
     const data = await res.json()
+    console.log("Classify data:", JSON.stringify(data?.content))
     return (
       data.content?.find((b) => b.type === "text")?.text?.trim() ||
       "Otro documento"
@@ -173,6 +176,11 @@ export function Demo() {
             reader.onload = async () => {
               const base64 = reader.result.split(",")[1]
               const tag = await classifyImage(base64)
+              console.log("Tag resultado:", tag)
+              console.log("Imagen clasificada:", {
+                tag,
+                previewLength: reader.result.length,
+              })
               resolve({
                 source: {
                   type: "base64",
