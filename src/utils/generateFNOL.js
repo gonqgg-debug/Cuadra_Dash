@@ -229,12 +229,14 @@ export function generateFNOLReport(siniestroData, images = []) {
   if (images.length > 0) {
     y = sectionHeader("6. Evidencia Fotográfica Adjunta", y)
     let imgX = margin
-    images.slice(0, 4).forEach((imgData, i) => {
+    images.slice(0, 4).forEach((img, i) => {
+      const imgData = typeof img === "string" ? img : img?.preview
+      const label = typeof img === "object" && img?.tag ? img.tag : `Foto ${i + 1}`
       try {
         doc.addImage(imgData, "JPEG", imgX, y, 38, 28)
         doc.setFontSize(7)
         doc.setTextColor(...gray)
-        doc.text(`Foto ${i + 1}`, imgX + 19, y + 31, { align: "center" })
+        doc.text(label, imgX + 19, y + 31, { align: "center" })
         imgX += 42
       } catch (e) {
         console.warn("Error adding image to PDF:", e)

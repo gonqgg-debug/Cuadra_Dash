@@ -28,6 +28,45 @@ const QUICK_PROMPTS = [
   "¿Qué cubre el seguro de auto amplio?",
 ]
 
+async function classifyImage(base64Data) {
+  try {
+    const res = await fetch(`${SERVER}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/jpeg",
+                  data: base64Data,
+                },
+              },
+              {
+                type: "text",
+                text: "Clasifica esta imagen en UNA de estas categorías exactas: 'Daño al vehículo', 'INE / Identificación oficial', 'Licencia de conducir', 'Tarjeta de circulación', 'Escena del accidente', 'Otro documento'. Responde SOLO con la categoría, sin explicación.",
+              },
+            ],
+          },
+        ],
+        system:
+          "Eres un clasificador de imágenes para seguros. Responde solo con la categoría.",
+      }),
+    })
+    const data = await res.json()
+    return (
+      data.content?.find((b) => b.type === "text")?.text?.trim() ||
+      "Otro documento"
+    )
+  } catch {
+    return "Otro documento"
+  }
+}
+
 function getSummary(tool, data) {
   if (tool?.includes?.("quote") || data?.quotes) {
     const p = data?.quotes?.[0]?.prima_anual ?? data?.quotes?.[0]?.precio ?? 0
@@ -53,6 +92,8 @@ export function Demo() {
   const [lastResult, setLastResult] = useState(null)
   const [fnolData, setFnolData] = useState(null)
   const [fnolImages, setFnolImages] = useState([])
+  const [siniestroImages, setSiniestroImages] = useState([])
+  const siniestroImagesRef = useRef([])
   const [connected, setConnected] = useState(false)
   const [pendingImages, setPendingImages] = useState([])
   const messagesEndRef = useRef(null)
@@ -108,6 +149,8 @@ export function Demo() {
     setLastResult(null)
     setFnolData(null)
     setFnolImages([])
+    setSiniestroImages([])
+    siniestroImagesRef.current = []
   }
 
   const handleImageUpload = async (e) => {
@@ -127,8 +170,9 @@ export function Demo() {
         (file) =>
           new Promise((resolve) => {
             const reader = new FileReader()
-            reader.onload = () => {
+            reader.onload = async () => {
               const base64 = reader.result.split(",")[1]
+              const tag = await classifyImage(base64)
               resolve({
                 source: {
                   type: "base64",
@@ -136,6 +180,7 @@ export function Demo() {
                   data: base64,
                 },
                 preview: reader.result,
+                tag,
               })
             }
             reader.readAsDataURL(file)
@@ -293,6 +338,14 @@ export function Demo() {
       if (!hasContent || isLoading) return
 
       const sessionImages = [...pendingImages]
+      if (sessionImages.length > 0) {
+        const newAccum = [
+          ...siniestroImagesRef.current,
+          ...sessionImages.map((img) => ({ preview: img.preview, tag: img.tag })),
+        ]
+        siniestroImagesRef.current = newAccum
+        setSiniestroImages(newAccum)
+      }
       setInput("")
 
       const userContent =
@@ -424,7 +477,7 @@ export function Demo() {
           if (tool === "render_siniestro_widget") {
             fnolAccum = { ...fnolAccum, ...(toolUse.input || {}) }
             setFnolData(fnolAccum)
-            setFnolImages(sessionImages.map((img) => img.preview))
+            setFnolImages(siniestroImagesRef.current)
           }
 
           handleToolResult(toolUse, toolResult, data.content)
@@ -584,12 +637,18 @@ export function Demo() {
             {pendingImages.length > 0 && (
               <div className="flex gap-2 px-4 py-2">
                 {pendingImages.map((img, i) => (
-                  <div key={i} className="relative">
+                  <div
+                    key={i}
+                    className="relative flex flex-col items-center gap-1"
+                  >
                     <img
                       src={img.preview}
                       alt=""
                       className="h-16 w-16 rounded-lg border border-gray-200 object-cover"
                     />
+                    <span className="max-w-16 text-center text-xs leading-tight text-gray-500">
+                      {img.tag || "Clasificando..."}
+                    </span>
                     <button
                       type="button"
                       onClick={() =>
